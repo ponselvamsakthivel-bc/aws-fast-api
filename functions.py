@@ -1,3 +1,4 @@
+
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 import json
@@ -6,9 +7,9 @@ from datetime import datetime, timedelta
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
-from api import *
 from models import *
 from fastapi import *
+
 
 def get_aws_details(profile_name, region):
     try:
@@ -20,12 +21,12 @@ def get_aws_details(profile_name, region):
 
         # Example: Get information about EC2 instances
         response = ec2_client.describe_instances()
-
+        print("Response : ", response)
         # Convert response to JSON format
-        result = json.dumps(response, default=APIRoute.convert_datetime, indent=2)
-
+        #result = json.dumps(response, default=APIRoute.convert_datetime, indent=2)
+        return response
         # Process and return the response
-        return result
+        #return result
 
     except NoCredentialsError:
         return "Credentials not available or not valid. Please configure AWS credentials."
@@ -130,12 +131,10 @@ def get_s3_details(profile_name, bucket_name):
 
         # Example: Get information about S3 bucket
         response = s3_client.list_objects(Bucket=bucket_name)
-        
         # Convert response to JSON format
-        result = json.dumps(response, default=api.convert_datetime, indent=2)
-
+        #result = json.dumps(response, default=APIRouter.convert_datetime, indent=2)
         # Process and return the response
-        return result
+        return response
 
     except NoCredentialsError:
         return "Credentials not available or not valid. Please configure AWS credentials."
@@ -144,7 +143,9 @@ def get_s3_details(profile_name, bucket_name):
     except Exception as e:
         return f"An error occurred: {str(e)}"
     
-
+def convert_datetime(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
 
 
 def get_s3_buckets(profile_name):
@@ -595,5 +596,3 @@ def get_cloudwatch_alarms(profile_name, region):
         raise ValueError("Incomplete credentials provided. Please provide valid AWS credentials.")
     except Exception as e:
         raise ValueError(f"An error occurred: {str(e)}")
-
-

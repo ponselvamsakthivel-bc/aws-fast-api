@@ -2,14 +2,13 @@ import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 import json
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from datetime import datetime, timedelta
-from functions import get_cloudwatch_logs
 from models import *
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
+from functions import *
 import json
-from functions import get_aws_details
 
 app = FastAPI()
 
@@ -18,13 +17,15 @@ app = FastAPI()
 async def fetch_aws_details(request: AWSDetailsRequest):
     profile_name = request.profile_name
     region = request.region
-
+    print(region)
     try:
         response = get_aws_details(profile_name, region)
         return AWSDetailsResponse(message=json.loads(response))
+        #return AWSDetailsResponse(message=response)
 
     except Exception as e:
-        return AWSDetailsResponse(message=f"Error: {str(e)}")
+        #return AWSDetailsResponse(message=f"Error: {str(e)}")
+        return AWSDetailsResponse(message={"Error": str(e)})
 
 @app.post("/deregister_ami", response_model=AMIDeregistrationResponse)
 async def deregister_ami(request: AMIDeregistrationRequest):
@@ -58,7 +59,8 @@ async def fetch_s3_details(request: S3DetailsRequest):
 
     try:
         response = get_s3_details(profile_name, bucket_name)
-        return S3DetailsResponse(message=json.loads(response))
+        #return S3DetailsResponse(message=json.loads(response))
+        return S3DetailsResponse(message=response)
 
     except Exception as e:
         return S3DetailsResponse(message=f"Error: {str(e)}")
@@ -226,8 +228,5 @@ async def list_cloudwatch_logs(request: CloudWatchLogsRequest):
     except Exception as e:
         return CloudWatchLogsResponse(log_groups=[], log_streams=[], message=f"Error: {str(e)}")
     
-def convert_datetime(obj):
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    
 
+    
