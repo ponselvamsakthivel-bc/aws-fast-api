@@ -596,3 +596,154 @@ def get_cloudwatch_alarms(profile_name, region):
         raise ValueError("Incomplete credentials provided. Please provide valid AWS credentials.")
     except Exception as e:
         raise ValueError(f"An error occurred: {str(e)}")
+
+
+def fetch_cloudtrail_insights(profile_name, region, start_time, end_time):
+    try:
+        # Create a session using the specified profile
+        session = boto3.Session(profile_name=profile_name)
+
+        # Create a CloudTrail client using the specified region
+        cloudtrail_client = session.client('cloudtrail', region_name=region)
+
+        # Get CloudTrail events with specific filters (simulating insights)
+        events_response = cloudtrail_client.lookup_events(
+            StartTime=start_time,
+            EndTime=end_time,
+            LookupAttributes=[
+                {'AttributeKey': 'EventName', 'AttributeValue': 'ConsoleLogin'},
+                {'AttributeKey': 'ReadOnly', 'AttributeValue': 'true'}
+            ]
+        )
+
+        events = events_response.get('Events', [])
+
+        # Extract relevant information from events
+        insight_list = [
+            {
+                'event_name': event['EventName'],
+                'event_time': event['EventTime'].isoformat(),
+                'username': event['Username'],
+                'source_ip_address': event.get('SourceIPAddress', 'N/A'),
+            }
+            for event in events
+        ]
+
+        return insight_list
+
+    except NoCredentialsError:
+        raise ValueError("Credentials not available or not valid. Please configure AWS credentials.")
+    except PartialCredentialsError:
+        raise ValueError("Incomplete credentials provided. Please provide valid AWS credentials.")
+    except Exception as e:
+        raise ValueError(f"An error occurred: {str(e)}")
+    
+
+
+def calculate_instance_cost(profile_name, region,instance_type, duration_hours):
+    try:
+        # Use the named profile from your AWS credentials file
+        session = boto3.Session(profile_name=profile_name)
+
+        # Create a Cost Explorer client
+        ce_client = session.client('ce', region_name=region)
+
+        # Define the filter for the instance type
+        filters = [
+            {
+                "Type": "TERM_MATCH",
+                "Key": "Service",
+                "Values": ["Amazon Elastic Compute Cloud - Compute"]
+            },
+            {
+                "Type": "TERM_MATCH",
+                "Key": "InstanceType",
+                "Values": [instance_type]
+            }
+        ]
+
+        # Get the cost and usage data
+        response = ce_client.get_cost_and_usage(
+            TimePeriod={
+                "Start": "2024-02-01",
+                "End": "2024-02-29"
+            },
+            Granularity="DAILY",
+            Metrics=["BlendedCost"],
+            Filter={"And": filters}
+        )
+
+        # Extract the estimated cost
+        results = response.get("ResultsByTime", [])
+        total_cost = sum(result["Total"]["BlendedCost"]["Amount"] for result in results)
+
+        # Calculate the cost for the specified duration
+        estimated_cost = total_cost / 30 * duration_hours  # Assuming monthly cost divided by 30 days
+
+        return estimated_cost
+
+    except Exception as e:
+        raise ValueError(f"An error occurred: {str(e)}")
+
+
+def get_recommendations(profile_name, region):
+    try:
+        # Use the named profile from your AWS credentials file
+        session = boto3.Session(profile_name=profile_name)
+
+        # Create a Cost Explorer client
+        ce_client = session.client('ce', region_name=region)
+
+        # Get recommendations
+        response = ce_client.get_recommendation_summaries()
+
+        # Extract recommendation details
+        recommendations = [
+            {
+                'account_id': recommendation['AccountId'],
+                'current_instance_type': recommendation['CurrentInstanceType'],
+                'recommended_instance_type': recommendation['RecommendedInstanceType'],
+                'savings_percentage': recommendation['SavingsPercentage'],
+            }
+            for recommendation in response.get('RecommendationSummaries', [])
+        ]
+
+        return recommendations
+
+    except Exception as e:
+        raise ValueError(f"An error occurred: {str(e)}")
+    
+def get_monthly_bill(request: MonthlyBillRequest):
+    try:
+        # Convert start_date and end_date to datetime objects
+        start_datetime = datetime.strptime(request.start_date, "%Y-%m-%d")
+        end_datetime = datetime.strptime(request.end_date, "%Y-%m-%d")
+
+        # Calculate the next day of the end_date to include the entire end day
+        end_datetime += timedelta(days=1)
+
+        # Create a session using the specified profile
+        session = boto3.Session(profile_name=request.profile_name)
+
+        # Create a Cost Explorer client
+        ce_client = session.client('ce')
+
+        # Example: Get the total cost for a specific time range
+        response = ce_client.get_cost_and_usage(
+            TimePeriod={
+                'Start': start_datetime.strftime('%Y-%m-%d'),
+                'End': end_datetime.strftime('%Y-%m-%d')
+            },
+            Granularity='MONTHLY',
+            Metrics=['UnblendedCost'],
+        )
+
+        # Extract and return the total cost
+        results_by_time = response['ResultsByTime']
+        total_cost = float(results_by_time[0]['Total']['UnblendedCost']['Amount'])
+
+        return MonthlyBillResponse(total_cost=total_cost)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    

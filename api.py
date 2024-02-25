@@ -229,4 +229,49 @@ async def list_cloudwatch_logs(request: CloudWatchLogsRequest):
         return CloudWatchLogsResponse(log_groups=[], log_streams=[], message=f"Error: {str(e)}")
     
 
+@app.post("/get_cloudtrail_insights", response_model=CloudTrailInsightsResponse)
+async def get_cloudtrail_insights(request: CloudTrailInsightsRequest):
+    profile_name = request.profile_name
+    region = request.region
+    start_time = request.start_time
+    end_time = request.end_time
+
+    try:
+        insights = fetch_cloudtrail_insights(profile_name, region, start_time, end_time)
+        return CloudTrailInsightsResponse(insights=insights)
+
+    except Exception as e:
+        return CloudTrailInsightsResponse(insights=[], message=f"Error: {str(e)}")
     
+
+@app.post("/estimate_cost", response_model=CostEstimationResponse)
+async def estimate_cost(request: CostEstimationRequest):
+    profile_name = request.profile_name
+    region = request.region
+    instance_type = request.instance_type
+    duration_hours = request.duration_hours
+
+    try:
+        estimated_cost = calculate_instance_cost(instance_type, duration_hours)
+        return CostEstimationResponse(estimated_cost=estimated_cost)
+
+    except Exception as e:
+        return CostEstimationResponse(estimated_cost=0.0, message=f"Error: {str(e)}")
+    
+@app.post("/list_recommendations", response_model=ListRecommendationsResponse)
+async def list_recommendations(request: ListRecommendationsRequest):
+    profile_name = request.profile_name
+    region = request.region
+
+    try:
+        recommendations = get_recommendations(profile_name, region)
+        return ListRecommendationsResponse(recommendations=recommendations)
+
+    except Exception as e:
+        return ListRecommendationsResponse(recommendations=[], message=f"Error: {str(e)}")
+
+
+@app.post("/monthly-bill", response_model=MonthlyBillResponse)
+def get_monthly_bill_api(request: MonthlyBillRequest):
+    return get_monthly_bill(request)
+

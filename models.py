@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Any, List, Dict
 
 class AWSDetailsRequest(BaseModel):
     profile_name: str
@@ -137,3 +138,36 @@ class CloudWatchAlarmsRequest(BaseModel):
 
 class CloudWatchAlarmsResponse(BaseModel):
     alarms: list
+
+class CloudTrailInsightsRequest(BaseModel):
+    profile_name: str
+    region: str
+    start_time: str
+    end_time: str
+
+class CloudTrailInsightsResponse(BaseModel):
+    insights: list
+
+class CostEstimationRequest(BaseModel):
+    profile_name: str
+    region: str
+    instance_type: str
+    duration_hours: int
+
+class CostEstimationResponse(BaseModel):
+    estimated_cost: float
+
+class ListRecommendationsRequest(BaseModel):
+    profile_name: str
+    region: str
+
+class ListRecommendationsResponse(BaseModel):
+    recommendations: list
+
+class MonthlyBillRequest(BaseModel):
+    profile_name: str
+    start_date: str
+    end_date: str
+
+class MonthlyBillResponse(BaseModel):
+    total_cost: float
